@@ -48,7 +48,7 @@ namespace LionStreamServices
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             dynamic data = JsonConvert.DeserializeObject(requestBody);
 
-            return new HttpResponseMessage { };
+            return new HttpResponseMessage { Content = new StringContent("cool story bro")};
         }
 
 
