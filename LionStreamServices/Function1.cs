@@ -20,8 +20,8 @@ namespace LionStreamServices
             ILogger log)
         {
             log.LogInformation("C# HTTP trigger function processed a request.");
-            var channelId = req.Query["challenId"].ToString();
-            log.LogInformation($"challenId: {channelId}");
+            var channelId = req.Query["channelId"].ToString();
+            log.LogInformation($"channelId: {channelId}");
 
             //Authoriztion
             var challenge = req.Query["hub.challenge"].ToString();
