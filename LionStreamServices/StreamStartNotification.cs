@@ -12,14 +12,14 @@ using System.Net;
 
 namespace LionStreamServices
 {
-    public static class Function1
+    public static class StreamStartNotification
     {
         [FunctionName("StreamStartNotification")]
-        public static async Task<HttpResponseMessage> Run(
+        public static async Task<HttpResponseMessage> StreamStartedNotification(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
             ILogger log)
         {
-            log.LogInformation("C# HTTP trigger function processed a request.");
+            log.LogInformation("StreamStartNotification function initiated...");
             var channelId = req.Query["channelId"].ToString();
             log.LogInformation($"channelId: {channelId}");
 
@@ -48,7 +48,7 @@ namespace LionStreamServices
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             dynamic data = JsonConvert.DeserializeObject(requestBody);
 
-            return new HttpResponseMessage { Content = new StringContent("cool story bro")};
+            return new HttpResponseMessage(HttpStatusCode.OK);
         }
 
 
