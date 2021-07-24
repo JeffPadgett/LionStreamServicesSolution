@@ -9,65 +9,94 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.Net.Http;
 using System.Net;
+using System.Text;
+using LionStreamServices.Models;
 
 namespace LionStreamServices
 {
-    public static class StreamStartNotification
+    public class StreamStartNotification
     {
+        private readonly IHttpClientFactory _clientFactory;
+
+        public StreamStartNotification(IHttpClientFactory clientFactory)
+        {
+            _clientFactory = clientFactory;
+        }
+
+
         [FunctionName("StreamStartNotification")]
-        public static async Task<HttpResponseMessage> StreamStartedNotification(
+        public static async Task<HttpResponseMessage> StreamStartedNotificationAsync(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
-            ILogger log)
+            ILogger log, IHttpClientFactory clientFactory)
         {
             log.LogInformation("StreamStartNotification function initiated...");
-            var channelId = req.Query["channelId"].ToString();
-            log.LogInformation($"channelId: {channelId}");
+            await SubscribeToStreamAsync(req, log, clientFactory);          
 
             //Authoriztion
             var challenge = req.Query["hub.challenge"].ToString();
-            if(!string.IsNullOrEmpty(challenge))
+            log.LogInformation($"challenge: {challenge}");
+            if (!string.IsNullOrEmpty(challenge))
             {
-                log.LogInformation($"Successfully subscribed to channel {channelId}");
-
-                return new HttpResponseMessage(HttpStatusCode.OK)
+                //log.LogInformation($"Successfully subscribed to channel {channelId}");
+                if (challenge == Environment.GetEnvironmentVariable("TwitchAPISecret"))
                 {
-                    Content = new StringContent(challenge)
-                };               
+                    log.LogInformation("Verification successful");
+                    return new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent(challenge)
+                    };
+                }
+
             }
 
-            if(!(await VerifyPayLoadSecret(req, log)))
-            {
-                log.LogError($"Invalid signature on request for ChannelId {channelId}");
-                return null;
-            }
-            else
-            {
-                log.LogTrace($"Valid signature for ChallenId {channelId}");
-            }
-
-            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            dynamic data = JsonConvert.DeserializeObject(requestBody);
-
-            return new HttpResponseMessage(HttpStatusCode.OK);
+            return new HttpResponseMessage(HttpStatusCode.NoContent);
         }
 
 
-        public static async Task<bool> VerifyPayLoadSecret(HttpRequest req, ILogger log)
+//        public static async Task<bool> VerifyPayLoadSecret(HttpRequest req, ILogger log)
+//        {
+//#if DEBUG
+//            return true;
+//#endif
+//            string signature = req.Headers["Twitch-Eventsub-Message-Signature"].ToString();
+
+//            if (string.IsNullOrEmpty(signature))
+//            {
+//                log.LogError("Twitch signature header not found");
+//                return false;
+//            }
+
+//            // TODO: Compare against the the signature. 
+//            return true;
+//        }
+
+        public static async Task<HttpResponseMessage> SubscribeToStreamAsync(HttpRequest req, ILogger log, IHttpClientFactory clientFactory)
         {
-#if DEBUG
-            return true;
-#endif
-            string signature = req.Headers["Twitch-Eventsub-Message-Signature"].ToString();
+            var request = new HttpRequestMessage(HttpMethod.Get, "https://api.twitch.tv/helix/eventsub/subscriptions");
+            request.Headers.Add("Authorization", Environment.GetEnvironmentVariable("OAuthToken"));
+            string JsonBodyForSubscribe = JsonConvert.SerializeObject(new SubscribeBodyJson());
+            request.Content = new StringContent(JsonBodyForSubscribe, Encoding.UTF8, "application/json");
+            var client = clientFactory.CreateClient();
 
-            if(string.IsNullOrEmpty(signature))
+            HttpResponseMessage response = await client.SendAsync(request);
+
+            if (response.IsSuccessStatusCode)
             {
-                log.LogError("Twitch signature header not found");
-                return false;
+                log.LogInformation("status code OK posting response...");
+                var channelId = req.Query["channelId"].ToString();
+                var challenge = req.Query["hub.challenge"].ToString();
+
+                if (!string.IsNullOrEmpty(challenge))
+                {
+                    log.LogInformation($"Successfully subscribed to channel {channelId}");
+
+                    return new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent(challenge)
+                    };
+                }
             }
-
-            // TODO: Compare against the the signature. 
-            return true;
+            return new HttpResponseMessage(HttpStatusCode.PaymentRequired);
         }
-
     }
 }
