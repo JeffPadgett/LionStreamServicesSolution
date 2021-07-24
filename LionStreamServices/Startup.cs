@@ -11,12 +11,15 @@ using System.Net.Http;
 [assembly: FunctionsStartup(typeof(Startup))]
 namespace LionStreamServices
 {
-    public class Startup : FunctionsStartup
+    public sealed class Startup : FunctionsStartup
     {
 
         public override void Configure(IFunctionsHostBuilder builder)
         {
-            builder.Services.AddHttpClient();
+            builder.Services.AddHttpClient("SubClient", client =>
+            {
+                client.BaseAddress = new Uri(Environment.GetEnvironmentVariable("TwitchSubUri"));
+            });
 
         }
 

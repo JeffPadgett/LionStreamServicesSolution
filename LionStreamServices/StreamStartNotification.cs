@@ -14,23 +14,23 @@ using LionStreamServices.Models;
 
 namespace LionStreamServices
 {
-    public class StreamStartNotification
+    public sealed class StreamStartNotification
     {
-        private readonly IHttpClientFactory _clientFactory;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         public StreamStartNotification(IHttpClientFactory clientFactory)
         {
-            _clientFactory = clientFactory;
+            _httpClientFactory = clientFactory;
         }
 
 
         [FunctionName("StreamStartNotification")]
-        public static async Task<HttpResponseMessage> StreamStartedNotificationAsync(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
-            ILogger log, IHttpClientFactory clientFactory)
+        public async Task<HttpResponseMessage> StreamStartedNotificationAsync(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get","post", Route = null)] HttpRequest req,
+            ILogger log)
         {
             log.LogInformation("StreamStartNotification function initiated...");
-            await SubscribeToStreamAsync(req, log, clientFactory);          
+            await SubscribeToStreamAsync(req, log);          
 
             //Authoriztion
             var challenge = req.Query["hub.challenge"].ToString();
@@ -70,13 +70,13 @@ namespace LionStreamServices
 //            return true;
 //        }
 
-        public static async Task<HttpResponseMessage> SubscribeToStreamAsync(HttpRequest req, ILogger log, IHttpClientFactory clientFactory)
+        public async Task<HttpResponseMessage> SubscribeToStreamAsync(HttpRequest req, ILogger log)
         {
             var request = new HttpRequestMessage(HttpMethod.Get, "https://api.twitch.tv/helix/eventsub/subscriptions");
             request.Headers.Add("Authorization", Environment.GetEnvironmentVariable("OAuthToken"));
             string JsonBodyForSubscribe = JsonConvert.SerializeObject(new SubscribeBodyJson());
             request.Content = new StringContent(JsonBodyForSubscribe, Encoding.UTF8, "application/json");
-            var client = clientFactory.CreateClient();
+            var client = _httpClientFactory.CreateClient("SubClient");
 
             HttpResponseMessage response = await client.SendAsync(request);
 
