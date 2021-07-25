@@ -30,7 +30,8 @@ namespace LionStreamServices
             ILogger log)
         {
             log.LogInformation("StreamStartNotification function initiated...");
-            await SubscribeToStreamAsync(req, log);          
+            return await SubscribeToStreamAsync(req, log);
+            
 
             //Authoriztion
             var challenge = req.Query["hub.challenge"].ToString();
@@ -72,11 +73,12 @@ namespace LionStreamServices
 
         public async Task<HttpResponseMessage> SubscribeToStreamAsync(HttpRequest req, ILogger log)
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, "https://api.twitch.tv/helix/eventsub/subscriptions");
-            request.Headers.Add("Authorization", Environment.GetEnvironmentVariable("OAuthToken"));
-            string JsonBodyForSubscribe = JsonConvert.SerializeObject(new SubscribeBodyJson());
+            //Send the git reqeust to them, they send a HTTP GET request back to us. From the get requst that we get back, we need to botain 
+            //we need to send hub.mode: subscribe , which makes the origioanl request. We also send hub.topic, hub.challenge, 
+
             request.Content = new StringContent(JsonBodyForSubscribe, Encoding.UTF8, "application/json");
             var client = _httpClientFactory.CreateClient("SubClient");
+            client.DefaultRequestHeaders.Add("Authorization", Environment.GetEnvironmentVariable("OAuthToken"));
 
             HttpResponseMessage response = await client.SendAsync(request);
 
@@ -96,7 +98,7 @@ namespace LionStreamServices
                     };
                 }
             }
-            return new HttpResponseMessage(HttpStatusCode.PaymentRequired);
+            return response;
         }
     }
 }
