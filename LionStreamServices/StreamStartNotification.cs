@@ -14,7 +14,7 @@ using LionStreamServices.Models;
 
 namespace LionStreamServices
 {
-    public sealed class StreamStartNotification
+    public sealed class StreamStartNotification 
     {
         private readonly IHttpClientFactory _httpClientFactory;
 
@@ -53,30 +53,25 @@ namespace LionStreamServices
             return new HttpResponseMessage(HttpStatusCode.NoContent);
         }
 
-
-//        public static async Task<bool> VerifyPayLoadSecret(HttpRequest req, ILogger log)
-//        {
-//#if DEBUG
-//            return true;
-//#endif
-//            string signature = req.Headers["Twitch-Eventsub-Message-Signature"].ToString();
-
-//            if (string.IsNullOrEmpty(signature))
-//            {
-//                log.LogError("Twitch signature header not found");
-//                return false;
-//            }
-
-//            // TODO: Compare against the the signature. 
-//            return true;
-//        }
-
         public async Task<HttpResponseMessage> SubscribeToStreamAsync(HttpRequest req, ILogger log)
         {
             //Send the git reqeust to them, they send a HTTP GET request back to us. From the get requst that we get back, we need to botain 
             //we need to send hub.mode: subscribe , which makes the origioanl request. We also send hub.topic, hub.challenge, 
+            var request = new HttpRequestMessage(HttpMethod.Get, "https://api.twitch.tv/helix/webhooks/hub");
+            request.Headers.Add("Authorization", "Bearer b24qlp98n8nmy03n21z9hf7l38c3ja");
+            request.Headers.Add("Client-Id", "za4li2la2mf36yspac8n6uruf5hoi1");
+            var channelId = GetChannelIdForUserName("test");
 
-            request.Content = new StringContent(JsonBodyForSubscribe, Encoding.UTF8, "application/json");
+            var requestBody = new TwitchWebhookSubscriptionBody()
+            {
+                Callback = new Uri(Environment.GetEnvironmentVariable("StreamStartFunctionUri"), $"?channelId={channelId}").ToString(),
+                Mode = "subscribe",
+                Topic = $"https://api.twitch.tv/helix/streams?user_id={channelId}",
+                Lease_seconds = leaseInSeconds,
+                Secret = TWITCH_SECRET
+            }
+
+            request.Content = new StringContent(TwitchWebhookSubscriptionBody, Encoding.UTF8, "application/json");
             var client = _httpClientFactory.CreateClient("SubClient");
             client.DefaultRequestHeaders.Add("Authorization", Environment.GetEnvironmentVariable("OAuthToken"));
 
