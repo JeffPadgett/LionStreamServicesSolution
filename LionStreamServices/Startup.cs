@@ -1,4 +1,4 @@
-﻿using LionStreamServices;
+﻿using StreamServices;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,7 +9,7 @@ using System.Net.Http;
 
 
 [assembly: FunctionsStartup(typeof(Startup))]
-namespace LionStreamServices
+namespace StreamServices
 {
     public sealed class Startup : FunctionsStartup
     {
@@ -18,7 +18,7 @@ namespace LionStreamServices
         {
             builder.Services.AddHttpClient("SubClient", client =>
             {
-                client.BaseAddress = new Uri(Environment.GetEnvironmentVariable("TwitchSubUri"));
+                client.BaseAddress = new Uri(Environment.GetEnvironmentVariable("TwitchSubUri"));//https://api.twitch.tv/helix/webhooks/hub
             });
 
         }
