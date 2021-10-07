@@ -16,11 +16,7 @@ namespace StreamServices
 
         public override void Configure(IFunctionsHostBuilder builder)
         {
-            builder.Services.AddHttpClient("SubClient", client =>
-            {
-                client.BaseAddress = new Uri(Environment.GetEnvironmentVariable("TwitchSubUri"));//https://api.twitch.tv/helix/webhooks/hub
-            });
-
+            builder.Services.AddHttpClient();
         }
 
     }
