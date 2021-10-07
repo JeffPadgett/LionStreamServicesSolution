@@ -13,7 +13,7 @@ using System.Text;
 
 namespace StreamServices
 {
-    public sealed class StreamServices 
+    public sealed class StreamServices
     {
         private readonly IHttpClientFactory _httpClientFactory;
 
@@ -23,14 +23,27 @@ namespace StreamServices
         }
 
         [FunctionName("StreamStartNotification")]
-        public Task<HttpResponseMessage> StreamStartedNotificationAsync(
+        public HttpResponseMessage StreamStartedNotificationAsync(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
             ILogger log)
         {
             log.LogInformation("StreamStartNotification function initiated...");
 
-            return default;
-        }
+            var challenge = req.Query["hub.challenge"].ToString();
 
+            if (!string.IsNullOrEmpty(challenge))
+            {
+                log.LogInformation($"Successfully subscribed to channel");
+
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(challenge) };  
+            }
+            else
+            {
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
+            }
+
+
+        }
     }
+
 }
