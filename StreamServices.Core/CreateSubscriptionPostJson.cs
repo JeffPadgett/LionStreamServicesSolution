@@ -7,8 +7,8 @@ namespace StreamServices.Core
     {
         public string Type { get; set; }
         public string Version { get; set; }
-        public Condition Condition { get; set; }
-        public Transport Transport { get; set; }
+        public Condition Condition { get; set; } = new Condition();
+        public Transport Transport { get; set; } = new Transport();
     }
 
     public class Condition

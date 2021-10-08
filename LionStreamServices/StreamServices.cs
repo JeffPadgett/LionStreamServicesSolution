@@ -10,37 +10,22 @@ using Newtonsoft.Json;
 using System.Net.Http;
 using System.Net;
 using System.Text;
+using Microsoft.Extensions.Configuration;
 
 namespace StreamServices
 {
-    public sealed class StreamServices
+    public sealed class StreamServices : BaseFunction
     {
-        private readonly IHttpClientFactory _httpClientFactory;
-
-        public StreamServices(IHttpClientFactory clientFactory)
+        public StreamServices(IHttpClientFactory httpClientFactory, IConfiguration configuration) : base(httpClientFactory, configuration)
         {
-            _httpClientFactory = clientFactory;
         }
 
-        [FunctionName("StreamStartNotification")]
-        public HttpResponseMessage StreamStartedNotificationAsync(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
-            ILogger log)
+        [FunctionName("Subscribe")]
+        public async Task Subscribe([QueueTrigger("twitch-channel-subscription")] HttpRequest msg, ILogger logger)
         {
-            log.LogInformation("StreamStartNotification function initiated...");
+            logger.LogInformation("Subscribe function initiated...");
 
-            var challenge = req.Query["hub.challenge"].ToString();
-
-            if (!string.IsNullOrEmpty(challenge))
-            {
-                log.LogInformation($"Successfully subscribed to channel");
-
-                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(challenge) };  
-            }
-            else
-            {
-                return new HttpResponseMessage(HttpStatusCode.NotFound);
-            }
+            //var channelId = await GetChannelIdForUserName(msg);
 
 
         }
