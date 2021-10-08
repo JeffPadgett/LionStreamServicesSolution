@@ -21,12 +21,12 @@ namespace StreamServices
         }
 
         [FunctionName("Subscribe")]
-        public async Task Subscribe([QueueTrigger("twitch-channel-subscription")] HttpRequest msg, ILogger logger)
+        public async Task Subscribe([QueueTrigger("twitch-channel-subscription")] string msg, ILogger logger)
         {
             logger.LogInformation("Subscribe function initiated...");
 
-            //var channelId = await GetChannelIdForUserName(msg);
-
+            var channelId = await GetChannelIdForUserName(msg);
+            logger.LogInformation(channelId);
 
         }
     }
