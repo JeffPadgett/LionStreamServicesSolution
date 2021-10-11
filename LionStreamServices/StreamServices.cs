@@ -21,13 +21,29 @@ namespace StreamServices
         }
 
         [FunctionName("Subscribe")]
-        public async Task Subscribe([QueueTrigger("twitch-channel-subscription")] string msg, ILogger logger)
+        public async Task<HttpResponseMessage> Subscribe([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequest req, ILogger logger)
         {
             logger.LogInformation("Subscribe function initiated...");
+            string userName = req.Query["userId"];
+            //var callbackUrl = new Uri(Configuration[""]);
 
-            var channelId = await GetChannelIdForUserName(msg);
+            var channelId = await GetChannelIdForUserName(userName);
             logger.LogInformation(channelId);
+            if (channelId != null)
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            else
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }
 
+        [FunctionName("SendDiscordStreamStartNotification")]
+        public async Task SendDiscordStreamStartNotification([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequest req, ILogger logger)
+        {
+            logger.LogInformation("Subscribe function initiated...");
+            string userName = req.Query["userId"];
+            var callbackUrl = new Uri(Configuration[""]);
+
+            var channelId = await GetChannelIdForUserName(userName);
+            logger.LogInformation(channelId);
         }
     }
 
