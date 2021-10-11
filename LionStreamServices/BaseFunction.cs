@@ -7,7 +7,6 @@ using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
-[assembly: InternalsVisibleTo("StreamServices.Test")]
 namespace StreamServices
 {
     public abstract class BaseFunction
@@ -79,8 +78,6 @@ namespace StreamServices
 
         internal async Task<string> GetChannelIdForUserName(string userName)
         {
-
-
             var client = GetHttpClient("https://api.twitch.tv/helix/");
             var token = await GetAccessToken();
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token.AccessToken}");

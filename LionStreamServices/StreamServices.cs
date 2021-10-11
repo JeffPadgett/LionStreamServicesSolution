@@ -1,16 +1,17 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
+//Create an event sub of stream.online and stream.offline
+//To sub to a twitch webhook from the API the first thing we do is send a post request with a subscribe webhook object. The callback can be the same function, or can be a entirely differnt one. 
+//The secret that we store in the body is something we create ourselves. 
+
+
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using System.Net.Http;
-using System.Net;
-using System.Text;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using System.Net.Http;
+using System.Threading.Tasks;
+
 
 namespace StreamServices
 {
@@ -21,29 +22,17 @@ namespace StreamServices
         }
 
         [FunctionName("Subscribe")]
-        public async Task<HttpResponseMessage> Subscribe([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequest req, ILogger logger)
+        public async Task<IActionResult> Subscribe([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req, ILogger log)
         {
-            logger.LogInformation("Subscribe function initiated...");
-            string userName = req.Query["userId"];
-            //var callbackUrl = new Uri(Configuration[""]);
-
-            var channelId = await GetChannelIdForUserName(userName);
-            logger.LogInformation(channelId);
-            if (channelId != null)
-                return new HttpResponseMessage(HttpStatusCode.OK);
-            else
-                return new HttpResponseMessage(HttpStatusCode.NotFound);
+            log.LogInformation("Subscribe is working...");
+            return default;
         }
 
-        [FunctionName("SendDiscordStreamStartNotification")]
-        public async Task SendDiscordStreamStartNotification([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequest req, ILogger logger)
+        [FunctionName("Test")]
+        public async Task<IActionResult> Test([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req, ILogger log)
         {
-            logger.LogInformation("Subscribe function initiated...");
-            string userName = req.Query["userId"];
-            var callbackUrl = new Uri(Configuration[""]);
-
-            var channelId = await GetChannelIdForUserName(userName);
-            logger.LogInformation(channelId);
+            log.LogInformation("Test is working...");
+            return default;
         }
     }
 
