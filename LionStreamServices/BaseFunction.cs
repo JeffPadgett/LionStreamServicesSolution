@@ -1,10 +1,16 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using StreamServices.Core;
 using System;
+using System.IO;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace StreamServices
@@ -37,7 +43,7 @@ namespace StreamServices
             {
                 client.DefaultRequestHeaders.Add("Accept", @"application/json");
             }
-            client.DefaultRequestHeaders.Add("Accept", @"application/vnd.twitchtv.v5+json");
+            //client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Environment.GetEnvironmentVariable("AppAccessToken"));
             client.DefaultRequestHeaders.Add("Client-ID", clientId);
 
             return client;
@@ -104,6 +110,36 @@ namespace StreamServices
             var obj = JObject.Parse(body);
             return obj["data"][0]["id"].ToString();
 
+        }
+
+        protected static string CreateHmacHash(string data, string key)
+        {
+
+            var keybytes = UTF8Encoding.UTF8.GetBytes(key);
+            var dataBytes = UTF8Encoding.UTF8.GetBytes(data);
+
+            var hmac = new HMACSHA256(keybytes);
+            var hmacBytes = hmac.ComputeHash(dataBytes);
+
+            //return Convert.ToBase64String(hmacBytes);
+            return BitConverter.ToString(hmacBytes).Replace("-", "").ToLower();
+
+        }
+
+        protected async Task<bool> VerifyPayloadSecret(HttpRequest req, CreateSubscriptionPostJson subPostJson)
+        {
+            var signature = req.Headers["X-Hub-Signature"].ToString();
+            var ourHashCalculation = string.Empty;
+            if (req.Body.CanSeek)
+            {
+                using (var reader = new StreamReader(req.Body, Encoding.UTF8))
+                {
+                    req.Body.Position = 0;
+                    var bodyContent = await reader.ReadToEndAsync();
+                    ourHashCalculation = CreateHmacHash(bodyContent, subPostJson.Transport.Secret);
+                }
+            }
+            return ourHashCalculation == signature;
         }
     }
 }
