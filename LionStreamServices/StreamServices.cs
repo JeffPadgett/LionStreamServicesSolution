@@ -34,7 +34,7 @@ namespace StreamServices
         [FunctionName("Subscribe")]
         public async Task<IActionResult> Subscribe([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req, ILogger log)
         {
-            var twitchEndpoint = Environment.GetEnvironmentVariable("EventSubUrl");
+            var baseTwitchEndpoint = Environment.GetEnvironmentVariable("BaseTwitchUrl");
             string userName = req.Query["userName"].ToString();
 
             if (String.IsNullOrWhiteSpace(userName))
@@ -44,16 +44,15 @@ namespace StreamServices
 
             log.LogInformation($"Subscribeing {userName}");
             var userToSubscribeToo = await GetChannelIdForUserName(userName);
-            CreateSubscriptionPostJson subObject = new CreateSubscriptionPostJson(userToSubscribeToo);
+            TwitchSubscription subObject = new TwitchSubscription(userToSubscribeToo);
             var subPayLoad = JsonConvert.SerializeObject(subObject);
             var postRequestContent = new StringContent(subPayLoad, Encoding.UTF8, "application/json");
-            //setup header that has oAuth token
 
             string responseBody;
-            using (var client = GetHttpClient(twitchEndpoint))
+            using (var client = GetHttpClient(baseTwitchEndpoint))
             {
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Environment.GetEnvironmentVariable("AppAccessToken"));
-                var responseMessage = await client.PostAsync("", postRequestContent);
+                var responseMessage = await client.PostAsync("eventsub/subscriptions", postRequestContent);
 
                 if (!responseMessage.IsSuccessStatusCode)
                 {
@@ -72,21 +71,14 @@ namespace StreamServices
 
         [FunctionName("StreamOnline")]
         public async Task<IActionResult> StreamOnline([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req, ILogger log)
-        {
-            //setup callback object
-            //verify the signature
-            //respond to the callback request by returnign the value of the challenge. Return a raw string. 
-            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            
+        {           
             var reqTypeHeader = req.Headers["Twitch-Eventsub-Message-Type"];
             if (reqTypeHeader == "webhook_callback_verification")
-            {
-                
-            var hmacMessage = req.Headers["Twitch-Eventsub-Message-Id"] + req.Headers["Twitch-Eventsub-Message-Timestamp"] + requestBody;
+            {                
                 var isAuthenticated = await VerifySignature(req);
-                if (isAuthenticated)
+                if (!string.IsNullOrEmpty(isAuthenticated))
                 {
-                    return new OkObjectResult();//return challenge
+                    return new OkObjectResult(isAuthenticated);
                 }
                 else
                 {
@@ -94,9 +86,12 @@ namespace StreamServices
                 }
 
             }
+
+            //Post stuff to discord. 
+            return default;
         }
 
-        private async Task<bool> VerifySignature(HttpRequest req)
+        private async Task<string> VerifySignature(HttpRequest req)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             var callbackJson = JsonConvert.DeserializeObject<CallbackChallengeJson>(requestBody);
@@ -104,14 +99,13 @@ namespace StreamServices
 
             var expectedSignature = "sha256=" + CreateHmacHash(hmacMessage, Environment.GetEnvironmentVariable("EventSubSecret"));
 
-            //Send back challenge as a response. 
             var messageSignatureHeader = req.Headers["Twitch-Eventsub-Message-Signature"];
             if (expectedSignature == messageSignatureHeader)
             {
-                return true;
+                return callbackJson.Challenge;
             }
             else
-                return false;
+                return "";
         }
     }
 

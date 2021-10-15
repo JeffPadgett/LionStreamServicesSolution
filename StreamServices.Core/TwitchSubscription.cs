@@ -5,18 +5,20 @@ using System.Linq;
 namespace StreamServices.Core
 {
 
-    public class CreateSubscriptionPostJson
+    public class TwitchSubscription
     {
 
-        public CreateSubscriptionPostJson(string userId, string eventType = "stream.online")
+        public TwitchSubscription(string userId, string eventType = "stream.online")
         {
             Condition = new Condition(userId);
             Transport = new Transport();
             Type = eventType;
         }
-
+        [JsonProperty("type")]
         public string Type { get; set; }
+        [JsonProperty("version")]
         public string Version { get; set; } = "1";
+        [JsonProperty("condition")]
         public Condition Condition { get; set; }
 
         [JsonProperty("transport")]
@@ -27,9 +29,10 @@ namespace StreamServices.Core
     {
         public Condition(string userId)
         {
+
             Broadcaster_user_id = userId;
         }
-
+        [JsonProperty("broadcaster_user_id")]
         public string Broadcaster_user_id { get; set; }
     }
 
@@ -41,9 +44,11 @@ namespace StreamServices.Core
             Callback = Environment.GetEnvironmentVariable("StreamStartFunctionUri");
             Method = "webhook";
         }
-
+        [JsonProperty("method")]
         public string Method { get; set; }
+        [JsonProperty("callback")]
         public string Callback { get; set; }
+        [JsonProperty("secret")]
         public string Secret { get; set; }
     }
 

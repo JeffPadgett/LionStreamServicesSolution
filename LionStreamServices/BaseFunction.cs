@@ -43,7 +43,6 @@ namespace StreamServices
             {
                 client.DefaultRequestHeaders.Add("Accept", @"application/json");
             }
-            //client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Environment.GetEnvironmentVariable("AppAccessToken"));
             client.DefaultRequestHeaders.Add("Client-ID", clientId);
 
             return client;
@@ -126,7 +125,7 @@ namespace StreamServices
 
         }
 
-        protected async Task<bool> VerifyPayloadSecret(HttpRequest req, CreateSubscriptionPostJson subPostJson)
+        protected async Task<bool> VerifyPayloadSecret(HttpRequest req, TwitchSubscription subPostJson)
         {
             var signature = req.Headers["X-Hub-Signature"].ToString();
             var ourHashCalculation = string.Empty;
