@@ -79,6 +79,7 @@ namespace StreamServices
                 if (!string.IsNullOrEmpty(isAuthenticated))
                 {
                     return new OkObjectResult(isAuthenticated);
+                    log.LogInformation("User authenticated");
                 }
                 else
                 {
@@ -88,6 +89,7 @@ namespace StreamServices
             }
 
             //Post stuff to discord. 
+            log.LogInformation("Ready to post stuff to discord channels");
             return default;
         }
 
