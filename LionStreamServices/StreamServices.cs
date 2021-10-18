@@ -30,25 +30,29 @@ namespace StreamServices
         {
         }
 
-        //Function is meant to pass the userId in. 
+        //http://localhost:7071/api/Subscribe?userName=brokenswordx
+        //Function is meant to pass the userId in and subtype
         [FunctionName("Subscribe")]
         public async Task<IActionResult> Subscribe([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req, ILogger log)
         {
+            
             var baseTwitchEndpoint = Environment.GetEnvironmentVariable("BaseTwitchUrl");
-            string userName = req.Query["userName"].ToString();
+            string user = req.Query["userName"].ToString();
+            string subType = req.Query["subType"].ToString();
 
-            if (String.IsNullOrWhiteSpace(userName))
+            if (String.IsNullOrWhiteSpace(user))
             {
-                return new BadRequestObjectResult("Please pass a user name into the query string paramter. Like ?userName = \"coolStreamer\" ");
+                return new BadRequestObjectResult("Please pass a user name into the query string paramter. Like ?userName = coolStreamer or ?subType=channel.follow. ");
             }
 
-            log.LogInformation($"Subscribeing {userName}");
-            var userToSubscribeToo = await GetChannelIdForUserName(userName);
-            TwitchSubscription subObject = new TwitchSubscription(userToSubscribeToo);
+            log.LogInformation($"Subscribeing {user}");
+            var userToSubscribeToo = await IdentifyUser(user);
+            TwitchSubscription subObject = new TwitchSubscription(userToSubscribeToo, subType);
             var subPayLoad = JsonConvert.SerializeObject(subObject);
             var postRequestContent = new StringContent(subPayLoad, Encoding.UTF8, "application/json");
 
             string responseBody;
+            string namedUser = char.IsDigit(user[0]) ? await GetUserNameForChannelId(user) : user;
             using (var client = GetHttpClient(baseTwitchEndpoint))
             {
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Environment.GetEnvironmentVariable("AppAccessToken"));
@@ -61,12 +65,13 @@ namespace StreamServices
                 }
                 else
                 {
-                    log.LogInformation($"Subscribed to {userName}'s stream");
-                    return new OkObjectResult($"Subscribed to {userName}'s stream");
+                    log.LogInformation($"Subscribed to {namedUser}'s stream");
+                    return new OkObjectResult($"Notifications will now be sent to {namedUser}'s stream when {subType}");
                 }
             }
 
-            return new BadRequestObjectResult(responseBody);
+            log.LogInformation($"{namedUser} may already be subscribed...");
+            return new BadRequestObjectResult(responseBody + $" When attempting to subscribe {namedUser}");
         }
 
         [FunctionName("StreamOnline")]
@@ -78,8 +83,9 @@ namespace StreamServices
                 var isAuthenticated = await VerifySignature(req);
                 if (!string.IsNullOrEmpty(isAuthenticated))
                 {
-                    return new OkObjectResult(isAuthenticated);
                     log.LogInformation("User authenticated");
+                    return new OkObjectResult(isAuthenticated);
+
                 }
                 else
                 {

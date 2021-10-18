@@ -30,10 +30,10 @@ namespace StreamServices.Core
         public Condition(string userId)
         {
 
-            Broadcaster_user_id = userId;
+            BroadcasterUserId = userId;
         }
         [JsonProperty("broadcaster_user_id")]
-        public string Broadcaster_user_id { get; set; }
+        public string BroadcasterUserId { get; set; }
     }
 
     public class Transport

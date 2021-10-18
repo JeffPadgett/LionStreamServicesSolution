@@ -68,6 +68,14 @@ namespace StreamServices
 
         }
 
+        protected async Task<string> IdentifyUser(string user)
+        {
+            if (char.IsDigit(user[0]))
+                return user;
+            else
+               return await GetUserNameForChannelId(user);
+        }
+
         protected async Task<string> GetUserNameForChannelId(string channelId)
         {
             var client = GetHttpClient("https://api.twitch.tv/helix/");
