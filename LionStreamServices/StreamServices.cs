@@ -46,8 +46,8 @@ namespace StreamServices
             }
 
             log.LogInformation($"Subscribeing {user}");
-            var userToSubscribeToo = await IdentifyUser(user);
-            TwitchSubscription subObject = new TwitchSubscription(userToSubscribeToo, subType);
+            var channelToSubscribeTo = await IdentifyUser(user);
+            TwitchSubscriptionInitalPost subObject = new TwitchSubscriptionInitalPost(channelToSubscribeTo, subType);
             var subPayLoad = JsonConvert.SerializeObject(subObject);
             var postRequestContent = new StringContent(subPayLoad, Encoding.UTF8, "application/json");
 
@@ -85,24 +85,30 @@ namespace StreamServices
                 {
                     log.LogInformation("User authenticated");
                     return new OkObjectResult(isAuthenticated);
-
                 }
                 else
                 {
                     return new BadRequestResult();
                 }
-
             }
-
             //Post stuff to discord. 
             log.LogInformation("Ready to post stuff to discord channels");
             return default;
         }
 
+        [FunctionName("GetSubscriptions")]
+        public async Task<IActionResult> GetSubscriptions([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req, ILogger log)
+        {
+            log.LogInformation($"Getting Subscriptions...");
+            var baseTwitchEndpoint = Environment.GetEnvironmentVariable("BaseTwitchUrl");
+            return default;
+
+        }
+
         private async Task<string> VerifySignature(HttpRequest req)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            var callbackJson = JsonConvert.DeserializeObject<CallbackChallengeJson>(requestBody);
+            var callbackJson = JsonConvert.DeserializeObject<ChallengeJson>(requestBody);
             var hmacMessage = req.Headers["Twitch-Eventsub-Message-Id"] + req.Headers["Twitch-Eventsub-Message-Timestamp"] + requestBody;
 
             var expectedSignature = "sha256=" + CreateHmacHash(hmacMessage, Environment.GetEnvironmentVariable("EventSubSecret"));

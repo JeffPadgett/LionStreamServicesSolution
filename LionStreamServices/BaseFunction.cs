@@ -133,7 +133,7 @@ namespace StreamServices
 
         }
 
-        protected async Task<bool> VerifyPayloadSecret(HttpRequest req, TwitchSubscription subPostJson)
+        protected async Task<bool> VerifyPayloadSecret(HttpRequest req, TwitchSubscriptionInitalPost subPostJson)
         {
             var signature = req.Headers["X-Hub-Signature"].ToString();
             var ourHashCalculation = string.Empty;
