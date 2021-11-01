@@ -91,6 +91,7 @@ namespace StreamServices
                     return new BadRequestResult();
                 }
             }
+
             //Post stuff to discord. 
             log.LogInformation("Ready to post stuff to discord channels");
             return default;
