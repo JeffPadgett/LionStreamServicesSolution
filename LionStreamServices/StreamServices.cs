@@ -48,7 +48,7 @@ namespace StreamServices
             log.LogInformation($"Subscribeing {user}");
             var channelToSubscribeTo = await IdentifyUser(user);
             TwitchSubscriptionInitalPost subObject = new TwitchSubscriptionInitalPost(channelToSubscribeTo, subType);
-            var subPayLoad = JsonConvert.SerializeObject(subObject);
+            string subPayLoad = JsonConvert.SerializeObject(subObject);
             var postRequestContent = new StringContent(subPayLoad, Encoding.UTF8, "application/json");
 
             string responseBody;
@@ -92,8 +92,12 @@ namespace StreamServices
                 }
             }
 
-            //Post stuff to discord. 
+            //Parse incoming webhook to grab username and stream URL and store them in variables. 
+
+            //Post stuff to discord now. 
             log.LogInformation("Ready to post stuff to discord channels");
+            var discordWebHook = Environment.GetEnvironmentVariable("DiscordWebhook");
+            //Define payload, which is the message
             return default;
         }
 
