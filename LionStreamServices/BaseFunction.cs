@@ -72,9 +72,9 @@ namespace StreamServices
         protected async Task<string> IdentifyUser(string user)
         {
             if (char.IsDigit(user[0]))
-                return user;
+                return await GetUserNameForChannelId(user);
             else
-               return await GetUserNameForChannelId(user);
+                return user;
         }
 
         protected async Task<string> GetUserNameForChannelId(string channelId)
