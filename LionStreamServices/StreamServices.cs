@@ -50,7 +50,7 @@ namespace StreamServices
 
             log.LogInformation($"Subscribeing {user}");
             var channelToSubscribeTo = await IdentifyUser(user);
-            TwitchSubscriptionInitalPost subObject = new TwitchSubscriptionInitalPost(channelToSubscribeTo, subType);
+            TwitchSubscriptionInitalPost subObject = new TwitchSubscriptionInitalPost(await GetChannelIdForUserName(channelToSubscribeTo), subType);
             string subPayLoad = JsonConvert.SerializeObject(subObject);
             var postRequestContent = new StringContent(subPayLoad, Encoding.UTF8, "application/json");
 
@@ -58,7 +58,7 @@ namespace StreamServices
             string namedUser = char.IsDigit(user[0]) ? await GetUserNameForChannelId(user) : user;
             using (var client = GetHttpClient(baseTwitchEndpoint))
             {
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Environment.GetEnvironmentVariable("AppAccessToken"));
+                client.DefaultRequestHeaders.Add("Authorization", "Bearer " + Environment.GetEnvironmentVariable("AppAccesToken"));
                 var responseMessage = await client.PostAsync("eventsub/subscriptions", postRequestContent);
 
                 if (!responseMessage.IsSuccessStatusCode)
