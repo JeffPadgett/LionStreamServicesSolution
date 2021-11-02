@@ -108,11 +108,11 @@ namespace StreamServices
             //Define payload, which is the message
             var discordPayload = JsonConvert.SerializeObject(new DiscordChannelNotification($"{liveUser} is now live! {streamUrl}"));
             var postToDiscord = new StringContent(discordPayload, Encoding.UTF8, "application/json");
-            using (var client = GetHttpClient(discordWebHook, discordPost: true))
+            using (var client = new HttpClient())
             {
                 var response = await client.PostAsync(discordWebHook, postToDiscord);
-                return new OkObjectResult(response.Content.ReadAsStringAsync().Result);
             }
+            return default;
 
         }
 
