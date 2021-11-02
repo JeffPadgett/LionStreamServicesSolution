@@ -13,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using StreamServices.Core;
+using StreamServices.Core.Models;
 using System;
 using System.IO;
 using System.Net;
@@ -92,13 +93,25 @@ namespace StreamServices
                 }
             }
 
-            //Parse incoming webhook to grab username and stream URL and store them in variables. 
+            //Parse incoming webhook to grab username and stream URL and store them in variables.
+            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+            StreamOnlineJson streamOnlineJson = JsonConvert.DeserializeObject<StreamOnlineJson>(requestBody);
+            string liveUser = streamOnlineJson.Event.BroadcasterUserName;
+            string streamUrl = streamOnlineJson.Subscription.Transport.Callback;
 
             //Post stuff to discord now. 
             log.LogInformation("Ready to post stuff to discord channels");
             var discordWebHook = Environment.GetEnvironmentVariable("DiscordWebhook");
+
             //Define payload, which is the message
-            return default;
+            var discordPayload = JsonConvert.SerializeObject(new DiscordChannelNotification($"{liveUser} is now live! {streamUrl}"));
+            var postToDiscord = new StringContent(discordPayload, Encoding.UTF8, "application/json");
+            using (var client = GetHttpClient(discordWebHook, discordPost: true))
+            {
+                var response = await client.PostAsync(discordWebHook, postToDiscord);
+                return new OkObjectResult(response.Content.ReadAsStringAsync().Result);
+            }
+
         }
 
         [FunctionName("GetSubscriptions")]

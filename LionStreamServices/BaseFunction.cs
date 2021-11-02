@@ -31,7 +31,7 @@ namespace StreamServices
         public string TwitchClientID { get { return Environment.GetEnvironmentVariable("ClientId"); } }
 
 
-        public HttpClient GetHttpClient(string baseAddress, string clientId = "", bool includeJson = true)
+        public HttpClient GetHttpClient(string baseAddress, string clientId = "", bool includeJson = true, bool discordPost = false)
         {
 
             if (clientId == "") clientId = TwitchClientID;
@@ -43,10 +43,12 @@ namespace StreamServices
             {
                 client.DefaultRequestHeaders.Add("Accept", @"application/json");
             }
-            client.DefaultRequestHeaders.Add("Client-ID", clientId);
+            if (!discordPost)
+            {
+                client.DefaultRequestHeaders.Add("Client-ID", clientId);
+            }
 
             return client;
-
         }
 
         protected async Task<AppAccessToken> GetAccessToken()
