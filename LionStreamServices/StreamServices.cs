@@ -15,7 +15,9 @@ using Newtonsoft.Json;
 using StreamServices.Core;
 using StreamServices.Core.Models;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -36,7 +38,7 @@ namespace StreamServices
         [FunctionName("Subscribe")]
         public async Task<IActionResult> Subscribe([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req, ILogger log)
         {
-            
+
             var baseTwitchEndpoint = Environment.GetEnvironmentVariable("BaseTwitchUrl");
             string user = req.Query["userName"].ToString();
             string subType = req.Query["subType"].ToString();
@@ -77,10 +79,10 @@ namespace StreamServices
 
         [FunctionName("StreamOnline")]
         public async Task<IActionResult> StreamOnline([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req, ILogger log)
-        {           
+        {
             var reqTypeHeader = req.Headers["Twitch-Eventsub-Message-Type"];
             if (reqTypeHeader == "webhook_callback_verification")
-            {                
+            {
                 var isAuthenticated = await VerifySignature(req);
                 if (!string.IsNullOrEmpty(isAuthenticated))
                 {
@@ -119,6 +121,26 @@ namespace StreamServices
         {
             log.LogInformation($"Getting Subscriptions...");
             var baseTwitchEndpoint = Environment.GetEnvironmentVariable("BaseTwitchUrl");
+            using (var client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Add("Authorization", "Bearer " + Environment.GetEnvironmentVariable("AppAccesToken"));
+                client.DefaultRequestHeaders.Add("Client-ID", Environment.GetEnvironmentVariable("ClientId"));
+                var response = await client.GetAsync("https://api.twitch.tv/helix/eventsub/subscriptions");
+                response.EnsureSuccessStatusCode();
+                var resp = await response.Content.ReadAsStringAsync();
+
+                SubscriptionList subList = JsonConvert.DeserializeObject<SubscriptionList>(resp);
+                List<string> userNamesSubedTo = new List<string>();
+
+                foreach (Subscription sub in subList.Subscriptions)
+                {
+                    if (sub.Status == "enabled")
+                    {
+                        userNamesSubedTo.Add(await GetUserNameForChannelId(sub.Condition.BroadcasterUserId));
+                    }
+                }
+
+            }
             return default;
 
         }

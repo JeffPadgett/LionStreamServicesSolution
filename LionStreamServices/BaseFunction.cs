@@ -65,7 +65,6 @@ namespace StreamServices
                 result.EnsureSuccessStatusCode();
 
                 return JsonConvert.DeserializeObject<AppAccessToken>(await result.Content.ReadAsStringAsync());
-
             }
 
         }

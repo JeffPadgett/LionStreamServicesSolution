@@ -22,7 +22,6 @@ namespace StreamServices.Core
 
         public Condition Condition { get; set; }
         public Transport Transport { get; set; }
-
     }
 
     public class Event
@@ -57,7 +56,6 @@ namespace StreamServices.Core
         [JsonProperty("secret")]
         public string Secret { get; set; }
     }
-
     public class Pagination
     {
     }

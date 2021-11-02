@@ -5,18 +5,17 @@ using System.Text;
 
 namespace StreamServices.Core.Models
 {
-    public class TotalSubscriptions
+    public class SubscriptionList
     {
         [JsonProperty("data")]
-        public Subscription[] Data { get; set; }
-        [JsonProperty("Total")]
-        public int Total { get; set; }
+        public List<Subscription> Subscriptions { get; set; }
+        [JsonProperty("total")]
+        public string Total { get; set; }
         [JsonProperty("total_cost")]
-        public int TotalCost { get; set; }
+        public string TotalCost { get; set; }
         [JsonProperty("max_total_cost")]
-        public int MaxTotalCost { get; set; }
+        public string MaxTotalCost { get; set; }
         [JsonProperty("pagination")]
         public Pagination Pagination { get; set; }
-
     }
 }
