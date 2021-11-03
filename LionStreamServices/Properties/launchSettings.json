@@ -1,7 +1,8 @@
 {
   "profiles": {
     "LionStreamServices": {
-      "commandName": "Project"
+      "commandName": "Project",
+      //"commandLineArgs": "host start --pause-on-error"
     }
   }
 }

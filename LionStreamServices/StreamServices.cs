@@ -72,8 +72,6 @@ namespace StreamServices
                     return new OkObjectResult($"Notifications will now be sent to {namedUser}'s stream when {subType}");
                 }
             }
-
-            log.LogInformation($"{namedUser} may already be subscribed...");
             return new BadRequestObjectResult(responseBody + $" When attempting to subscribe {namedUser}");
         }
 
@@ -99,14 +97,13 @@ namespace StreamServices
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             StreamOnlineJson streamOnlineJson = JsonConvert.DeserializeObject<StreamOnlineJson>(requestBody);
             string liveUser = streamOnlineJson.Event.BroadcasterUserName;
-            string streamUrl = streamOnlineJson.Subscription.Transport.Callback;
 
             //Post stuff to discord now. 
             log.LogInformation("Ready to post stuff to discord channels");
             var discordWebHook = Environment.GetEnvironmentVariable("DiscordWebhook");
 
             //Define payload, which is the message
-            var discordPayload = JsonConvert.SerializeObject(new DiscordChannelNotification($"{liveUser} is now live! {streamUrl}"));
+            var discordPayload = JsonConvert.SerializeObject(new DiscordChannelNotification($"{liveUser} is now live! " + "https://www.twitch.tv/" + liveUser));
             var postToDiscord = new StringContent(discordPayload, Encoding.UTF8, "application/json");
             using (var client = new HttpClient())
             {
