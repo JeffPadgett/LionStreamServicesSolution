@@ -95,8 +95,8 @@ namespace StreamServices
 
             //Parse incoming webhook to grab username and stream URL and store them in variables.
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            StreamStatusJson streamStatusJson = JsonConvert.DeserializeObject<Core.Models.StreamStatusJson>(requestBody);
-            string liveUser = streamStatusJson.Event.BroadcasterUserName;
+            StreamStatusJson streamData = JsonConvert.DeserializeObject<Core.Models.StreamStatusJson>(requestBody);
+            string liveUser = streamData.Event.BroadcasterUserName;
 
             //Post stuff to discord now. 
             log.LogInformation("Ready to post stuff to discord channels");
@@ -104,14 +104,19 @@ namespace StreamServices
 
             //Define payload, which is the message
             string discordMessage;
-            if (streamStatusJson.Subscription.Type == "stream.online")
+            if (streamData.Subscription.Type == "stream.offline")
             {
                 discordMessage = $"{liveUser} ended their stream :( " + "https://www.twitch.tv/" + liveUser;
             }
-            else
+            else if (streamData.Subscription.Type == "stream.online")
             {
                 discordMessage = $"{liveUser} is now live! " + "https://www.twitch.tv/" + liveUser;
             }
+            else if (streamData.Subscription.Type == "channel.follow")
+            {
+                discordMessage = $"{streamData.Event.UserName} just followed the stream!";
+            }
+            else { discordMessage = ""}
             var discordPayload = JsonConvert.SerializeObject(new DiscordChannelNotification(discordMessage));
             var postToDiscord = new StringContent(discordPayload, Encoding.UTF8, "application/json");
             using (var client = new HttpClient())
