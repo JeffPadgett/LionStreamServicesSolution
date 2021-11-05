@@ -116,7 +116,7 @@ namespace StreamServices
             {
                 discordMessage = $"{streamData.Event.UserName} just followed the stream!";
             }
-            else { discordMessage = ""}
+            else { discordMessage = ""; }
             var discordPayload = JsonConvert.SerializeObject(new DiscordChannelNotification(discordMessage));
             var postToDiscord = new StringContent(discordPayload, Encoding.UTF8, "application/json");
             using (var client = new HttpClient())
