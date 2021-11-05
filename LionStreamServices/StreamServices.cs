@@ -80,32 +80,22 @@ namespace StreamServices
         {
             if (req.Headers["Twitch-Eventsub-Message-Type"] == "webhook_callback_verification")
             {
-                //
-                var isAuthenticated = await VerifySignature(req);
-                if (!string.IsNullOrEmpty(isAuthenticated))
-                {
-                    log.LogInformation("User authenticated");
-                    return new OkObjectResult(isAuthenticated);
-                }
-                else
-                {
-                    return new BadRequestResult();
-                }
+                await VerifySignature(req);
             }
 
-            //Parse incoming webhook to grab username and stream URL and store them in variables.
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            StreamStatusJson streamData = JsonConvert.DeserializeObject<Core.Models.StreamStatusJson>(requestBody);
+            StreamStatusJson streamData = JsonConvert.DeserializeObject<StreamStatusJson>(requestBody);
 
             string discordMessage = SetDiscordMessage(streamData);
-            string chatRoom = SetChatRoom(streamData);
+            string discordWebhook = SetChatRoom(streamData);
 
             var discordPayload = JsonConvert.SerializeObject(new DiscordChannelNotification(discordMessage));
-            var postToDiscord = new StringContent(discordPayload, Encoding.UTF8, "application/json");
+            var discordPost = new StringContent(discordPayload, Encoding.UTF8, "application/json");
             using (var client = new HttpClient())
             {
-                var response = await client.PostAsync(chatRoom, postToDiscord);
+                var response = await client.PostAsync(discordWebhook, discordPost);
             }
+
             return default;
         }
 
@@ -168,7 +158,7 @@ namespace StreamServices
 
         }
 
-        private async Task<string> VerifySignature(HttpRequest req)
+        private async Task<IActionResult> VerifySignature(HttpRequest req)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             var callbackJson = JsonConvert.DeserializeObject<ChallengeJson>(requestBody);
@@ -179,10 +169,10 @@ namespace StreamServices
             var messageSignatureHeader = req.Headers["Twitch-Eventsub-Message-Signature"];
             if (expectedSignature == messageSignatureHeader)
             {
-                return callbackJson.Challenge;
+                return new OkObjectResult(callbackJson.Challenge);
             }
             else
-                return "";
+                return new BadRequestResult();
         }
     }
 
