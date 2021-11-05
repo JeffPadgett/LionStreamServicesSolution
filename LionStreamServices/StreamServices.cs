@@ -75,12 +75,12 @@ namespace StreamServices
             return new BadRequestObjectResult(responseBody + $" When attempting to subscribe {namedUser}");
         }
 
-        [FunctionName("StreamOnline")]
+        [FunctionName("DiscordNotificationProcessor")]
         public async Task<IActionResult> StreamOnline([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req, ILogger log)
         {
-            var reqTypeHeader = req.Headers["Twitch-Eventsub-Message-Type"];
-            if (reqTypeHeader == "webhook_callback_verification")
+            if (req.Headers["Twitch-Eventsub-Message-Type"] == "webhook_callback_verification")
             {
+                //
                 var isAuthenticated = await VerifySignature(req);
                 if (!string.IsNullOrEmpty(isAuthenticated))
                 {
@@ -96,35 +96,47 @@ namespace StreamServices
             //Parse incoming webhook to grab username and stream URL and store them in variables.
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             StreamStatusJson streamData = JsonConvert.DeserializeObject<Core.Models.StreamStatusJson>(requestBody);
-            string liveUser = streamData.Event.BroadcasterUserName;
 
-            //Post stuff to discord now. 
-            log.LogInformation("Ready to post stuff to discord channels");
-            var discordWebHook = Environment.GetEnvironmentVariable("DiscordWebhook");
+            string discordMessage = SetDiscordMessage(streamData);
+            string chatRoom = SetChatRoom(streamData);
 
-            //Define payload, which is the message
-            string discordMessage;
-            if (streamData.Subscription.Type == "stream.offline")
-            {
-                discordMessage = $"{liveUser} ended their stream :( " + "https://www.twitch.tv/" + liveUser;
-            }
-            else if (streamData.Subscription.Type == "stream.online")
-            {
-                discordMessage = $"{liveUser} is now live! " + "https://www.twitch.tv/" + liveUser;
-            }
-            else if (streamData.Subscription.Type == "channel.follow")
-            {
-                discordMessage = $"{streamData.Event.UserName} just followed the stream!";
-            }
-            else { discordMessage = ""; }
             var discordPayload = JsonConvert.SerializeObject(new DiscordChannelNotification(discordMessage));
             var postToDiscord = new StringContent(discordPayload, Encoding.UTF8, "application/json");
             using (var client = new HttpClient())
             {
-                var response = await client.PostAsync(discordWebHook, postToDiscord);
+                var response = await client.PostAsync(chatRoom, postToDiscord);
             }
             return default;
+        }
 
+        private static string SetDiscordMessage(StreamStatusJson streamData)
+        {
+            if (streamData.Subscription.Type == "stream.offline")
+            {
+               return $"{streamData.Event.BroadcasterUserName} ended their stream :( " + "https://www.twitch.tv/" + streamData.Event.BroadcasterUserName;
+            }
+            else if (streamData.Subscription.Type == "stream.online")
+            {
+                return $"{streamData.Event.BroadcasterUserName} is now live! " + "https://www.twitch.tv/" + streamData.Event.BroadcasterUserName;
+            }
+            else if (streamData.Subscription.Type == "channel.follow")
+            {
+                return $"{streamData.Event.UserName} just followed {streamData.Event.BroadcasterUserName}s stream!";
+            }
+            else
+            {
+                throw new NullReferenceException();
+            }
+        }
+
+        private static string SetChatRoom(StreamStatusJson streamData)
+        {
+            if (streamData.Subscription.Type == "stream.offline" || streamData.Subscription.Type == "stream.online")
+            {
+                return Environment.GetEnvironmentVariable("AnnouncementDiscordWebhook");
+            }
+
+            return Environment.GetEnvironmentVariable("LiveStreamDiscordWebhook");
         }
 
         [FunctionName("GetSubscriptions")]
