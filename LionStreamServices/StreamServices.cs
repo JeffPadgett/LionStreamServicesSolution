@@ -69,7 +69,7 @@ namespace StreamServices
                 else
                 {
                     log.LogInformation($"Subscribed to {namedUser}'s stream");
-                    return new OkObjectResult($"Notifications will now be sent to {namedUser}'s stream when {subType}");
+                    return new OkObjectResult($"Notifications will now be sent when {subType}");
                 }
             }
             return new BadRequestObjectResult(responseBody + $" When attempting to subscribe {namedUser}");
@@ -95,15 +95,24 @@ namespace StreamServices
 
             //Parse incoming webhook to grab username and stream URL and store them in variables.
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            StreamOnlineJson streamOnlineJson = JsonConvert.DeserializeObject<StreamOnlineJson>(requestBody);
-            string liveUser = streamOnlineJson.Event.BroadcasterUserName;
+            StreamStatusJson streamStatusJson = JsonConvert.DeserializeObject<Core.Models.StreamStatusJson>(requestBody);
+            string liveUser = streamStatusJson.Event.BroadcasterUserName;
 
             //Post stuff to discord now. 
             log.LogInformation("Ready to post stuff to discord channels");
             var discordWebHook = Environment.GetEnvironmentVariable("DiscordWebhook");
 
             //Define payload, which is the message
-            var discordPayload = JsonConvert.SerializeObject(new DiscordChannelNotification($"{liveUser} is now live! " + "https://www.twitch.tv/" + liveUser));
+            string discordMessage;
+            if (streamStatusJson.Subscription.Type == "stream.online")
+            {
+                discordMessage = $"{liveUser} ended their stream :( " + "https://www.twitch.tv/" + liveUser;
+            }
+            else
+            {
+                discordMessage = $"{liveUser} is now live! " + "https://www.twitch.tv/" + liveUser;
+            }
+            var discordPayload = JsonConvert.SerializeObject(new DiscordChannelNotification(discordMessage));
             var postToDiscord = new StringContent(discordPayload, Encoding.UTF8, "application/json");
             using (var client = new HttpClient())
             {

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace StreamServices.Core.Models
 {
-    public class StreamOnlineJson
+    public class StreamStatusJson
     {
         public Subscription Subscription { get; set; }
         public Event Event { get; set; }
