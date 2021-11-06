@@ -69,7 +69,7 @@ namespace StreamServices
                 else
                 {
                     log.LogInformation($"Subscribed to {namedUser}'s stream");
-                    return new OkObjectResult($"Notifications will now be sent when {subType}");
+                    return new OkObjectResult($"Notifications will now be sent when {subType} on stream {namedUser}");
                 }
             }
             return new BadRequestObjectResult(responseBody + $" When attempting to subscribe {namedUser}");
