@@ -31,7 +31,6 @@ namespace StreamServices
         [FunctionName("Subscribe")]
         public async Task<IActionResult> Subscribe([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req, ILogger log)
         {
-
             var baseTwitchEndpoint = Environment.GetEnvironmentVariable("BaseTwitchUrl");
             string user = req.Query["userName"].ToString();
             string subType = req.Query["subType"].ToString();
@@ -69,11 +68,20 @@ namespace StreamServices
         }
 
         [FunctionName("DiscordNotificationProcessor")]
-        public async Task<IActionResult> StreamOnline([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req, ILogger log)
+        public async Task<IActionResult> DiscordNotificationProcessor([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req, ILogger log)
         {
             if (req.Headers["Twitch-Eventsub-Message-Type"] == "webhook_callback_verification")
             {
-                await VerifySignature(req);
+                var isAuthenticated = await VerifySignature(req);
+                if (!string.IsNullOrEmpty(isAuthenticated))
+                {
+                    log.LogInformation("User authenticated");
+                    return new OkObjectResult(isAuthenticated);
+                }
+                else
+                {
+                    return new BadRequestResult();
+                }
             }
 
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
@@ -96,7 +104,7 @@ namespace StreamServices
         {
             if (streamData.Subscription.Type == "stream.offline")
             {
-               return $"{streamData.Event.BroadcasterUserName} ended their stream :( " + "https://www.twitch.tv/" + streamData.Event.BroadcasterUserName;
+                return $"{streamData.Event.BroadcasterUserName} ended their stream :( " + "https://www.twitch.tv/" + streamData.Event.BroadcasterUserName;
             }
             else if (streamData.Subscription.Type == "stream.online")
             {
@@ -151,7 +159,7 @@ namespace StreamServices
 
         }
 
-        private async Task<IActionResult> VerifySignature(HttpRequest req)
+        private async Task<string> VerifySignature(HttpRequest req)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             var callbackJson = JsonConvert.DeserializeObject<ChallengeJson>(requestBody);
@@ -162,11 +170,12 @@ namespace StreamServices
             var messageSignatureHeader = req.Headers["Twitch-Eventsub-Message-Signature"];
             if (expectedSignature == messageSignatureHeader)
             {
-                return new OkObjectResult(callbackJson.Challenge);
+                return callbackJson.Challenge;
             }
             else
-                return new BadRequestResult();
+                return "";
         }
+
     }
 
 
