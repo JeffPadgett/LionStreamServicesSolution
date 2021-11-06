@@ -145,18 +145,21 @@ namespace StreamServices
 
                 SubscriptionList subList = JsonConvert.DeserializeObject<SubscriptionList>(resp);
                 List<string> userNamesSubedTo = new List<string>();
-
+                List<Subscription> sweetList = new List<Subscription>();
                 foreach (Subscription sub in subList.Subscriptions)
                 {
                     if (sub.Status == "enabled")
                     {
-                        userNamesSubedTo.Add(await GetUserNameForChannelId(sub.Condition.BroadcasterUserId));
+                        //userNamesSubedTo.Add(await GetUserNameForChannelId(sub.Condition.BroadcasterUserId));
+                        var stuff = (await GetUserNameForChannelId(sub.Condition.BroadcasterUserId));
+                        sub.Version = stuff;
+                        sweetList.Add(sub);
                     }
                 }
-
+                return new OkObjectResult(JsonConvert.SerializeObject(sweetList));
             }
-            return default;
 
+            return default;
         }
 
         private async Task<string> VerifySignature(HttpRequest req)
