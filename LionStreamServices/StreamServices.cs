@@ -1,10 +1,3 @@
-//Create an event sub of stream.online and stream.offline
-//To sub to a twitch webhook from the API the first thing we do is send a post request with a subscribe webhook object. The callback can be the same function, or can be a entirely differnt one. 
-//The secret that we store in the body is something we create ourselves. 
-
-//Create an object that represents the JSON of our event. 
-
-
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
