@@ -53,13 +53,11 @@ namespace StreamServices
 
         protected async Task<AppAccessToken> GetAccessToken()
         {
-
             var clientId = Environment.GetEnvironmentVariable("ClientId");
             var clientSecret = Environment.GetEnvironmentVariable("ClientSecret");
 
             using (var client = GetHttpClient("https://id.twitch.tv"))
             {
-
                 var result = await client.PostAsync($"/oauth2/token?client_id={clientId}&client_secret={clientSecret}&grant_type=client_credentials&scope=", new StringContent(""));
 
                 result.EnsureSuccessStatusCode();
