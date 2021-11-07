@@ -161,24 +161,6 @@ namespace StreamServices
 
             return default;
         }
-
-        private async Task<string> VerifySignature(HttpRequest req)
-        {
-            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            var callbackJson = JsonConvert.DeserializeObject<ChallengeJson>(requestBody);
-            var hmacMessage = req.Headers["Twitch-Eventsub-Message-Id"] + req.Headers["Twitch-Eventsub-Message-Timestamp"] + requestBody;
-
-            var expectedSignature = "sha256=" + CreateHmacHash(hmacMessage, Environment.GetEnvironmentVariable("EventSubSecret"));
-
-            var messageSignatureHeader = req.Headers["Twitch-Eventsub-Message-Signature"];
-            if (expectedSignature == messageSignatureHeader)
-            {
-                return callbackJson.Challenge;
-            }
-            else
-                return "";
-        }
-
     }
 
 

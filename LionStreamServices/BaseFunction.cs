@@ -17,24 +17,17 @@ namespace StreamServices
 {
     public abstract class BaseFunction
     {
-
         protected IHttpClientFactory HttpClientFactory { get; }
-
         protected IConfiguration Configuration { get; }
-
         protected BaseFunction(IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
             HttpClientFactory = httpClientFactory;
             Configuration = configuration;
         }
 
-        public string TwitchClientID { get { return Environment.GetEnvironmentVariable("ClientId"); } }
-
-
         public HttpClient GetHttpClient(string baseAddress, string clientId = "", bool includeJson = true, bool discordPost = false)
         {
-
-            if (clientId == "") clientId = TwitchClientID;
+            if (clientId == "") clientId = Environment.GetEnvironmentVariable("ClientId");
 
             var client = HttpClientFactory.CreateClient();
             client.BaseAddress = new Uri(baseAddress);
@@ -64,15 +57,6 @@ namespace StreamServices
 
                 return JsonConvert.DeserializeObject<AppAccessToken>(await result.Content.ReadAsStringAsync());
             }
-
-        }
-
-        protected async Task<string> IdentifyUser(string user)
-        {
-            if (char.IsDigit(user[0]))
-                return await GetUserNameForChannelId(user);
-            else
-                return user;
         }
 
         protected async Task<string> GetUserNameForChannelId(string channelId)
@@ -94,7 +78,7 @@ namespace StreamServices
             var token = await GetAccessToken();
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token.AccessToken}");
 
-            string body = string.Empty;
+            string body;
             try
             {
                 var msg = await client.GetAsync($"users?login={userName}");
@@ -103,7 +87,7 @@ namespace StreamServices
             }
             catch (HttpRequestException e)
             {
-                throw;
+                throw e;
             }
             catch
             {
@@ -115,37 +99,42 @@ namespace StreamServices
 
             var obj = JObject.Parse(body);
             return obj["data"][0]["id"].ToString();
+        }
 
+        protected async Task<string> IdentifyUser(string user)
+        {
+            if (char.IsDigit(user[0]))
+                return await GetUserNameForChannelId(user);
+            else
+                return user;
+        }
+
+        protected async Task<string> VerifySignature(HttpRequest req)
+        {
+            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+            var callbackJson = JsonConvert.DeserializeObject<ChallengeJson>(requestBody);
+            var hmacMessage = req.Headers["Twitch-Eventsub-Message-Id"] + req.Headers["Twitch-Eventsub-Message-Timestamp"] + requestBody;
+
+            var expectedSignature = "sha256=" + CreateHmacHash(hmacMessage, Environment.GetEnvironmentVariable("EventSubSecret"));
+
+            var messageSignatureHeader = req.Headers["Twitch-Eventsub-Message-Signature"];
+            if (expectedSignature == messageSignatureHeader)
+            {
+                return callbackJson.Challenge;
+            }
+            else
+                return "";
         }
 
         protected static string CreateHmacHash(string data, string key)
         {
-
             var keybytes = UTF8Encoding.UTF8.GetBytes(key);
             var dataBytes = UTF8Encoding.UTF8.GetBytes(data);
 
             var hmac = new HMACSHA256(keybytes);
             var hmacBytes = hmac.ComputeHash(dataBytes);
 
-            //return Convert.ToBase64String(hmacBytes);
             return BitConverter.ToString(hmacBytes).Replace("-", "").ToLower();
-
-        }
-
-        protected async Task<bool> VerifyPayloadSecret(HttpRequest req, TwitchSubscriptionInitalPost subPostJson)
-        {
-            var signature = req.Headers["X-Hub-Signature"].ToString();
-            var ourHashCalculation = string.Empty;
-            if (req.Body.CanSeek)
-            {
-                using (var reader = new StreamReader(req.Body, Encoding.UTF8))
-                {
-                    req.Body.Position = 0;
-                    var bodyContent = await reader.ReadToEndAsync();
-                    ourHashCalculation = CreateHmacHash(bodyContent, subPostJson.Transport.Secret);
-                }
-            }
-            return ourHashCalculation == signature;
         }
     }
 }
