@@ -13,12 +13,11 @@ namespace StreamServices
 {
     public sealed class Startup : FunctionsStartup
     {
-
         public override void Configure(IFunctionsHostBuilder builder)
         {
             builder.Services.AddHttpClient();
+            builder.Services.AddAutoMapper(typeof(Startup).Assembly);
         }
-
     }
 
 }

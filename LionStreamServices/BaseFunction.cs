@@ -1,14 +1,14 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Azure.Cosmos.Table;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using StreamServices.Core;
+using StreamServices.Core.Models;
 using System;
 using System.IO;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -44,26 +44,25 @@ namespace StreamServices
             return client;
         }
 
-        protected async Task<AppAccessToken> GetAccessToken()
+        protected async Task GetAccessToken(AppAccessToken accessToken)
         {
             var clientId = Environment.GetEnvironmentVariable("ClientId");
             var clientSecret = Environment.GetEnvironmentVariable("ClientSecret");
 
-            using (var client = GetHttpClient("https://id.twitch.tv"))
-            {
-                var result = await client.PostAsync($"/oauth2/token?client_id={clientId}&client_secret={clientSecret}&grant_type=client_credentials&scope=", new StringContent(""));
+            using var client = GetHttpClient("https://id.twitch.tv");
+            var result = await client.PostAsync($"/oauth2/token?client_id={clientId}&client_secret={clientSecret}&grant_type=client_credentials&scope=", new StringContent(""));
 
-                result.EnsureSuccessStatusCode();
+            result.EnsureSuccessStatusCode();
 
-                return JsonConvert.DeserializeObject<AppAccessToken>(await result.Content.ReadAsStringAsync());
-            }
+            var refreshedToken = JsonConvert.DeserializeObject<AppAccessToken>(await result.Content.ReadAsStringAsync());
+            accessToken.AccessToken = refreshedToken.AccessToken;
+            accessToken.ExpiresAtUTC = DateTime.UtcNow.AddSeconds(refreshedToken.ExpiresInSeconds);
         }
 
-        protected async Task<string> GetUserNameForChannelId(string channelId)
+        protected async Task<string> GetUserNameForChannelId(string channelId, AppAccessToken accessToken)
         {
             var client = GetHttpClient("https://api.twitch.tv/helix/");
-            var token = await GetAccessToken();
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token.AccessToken}");
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken.AccessToken}");
 
             var body = await client.GetAsync($"users?id={channelId}")
               .ContinueWith(msg => msg.Result.Content.ReadAsStringAsync()).Result;
@@ -72,11 +71,10 @@ namespace StreamServices
             return obj["data"][0]["login"].ToString();
         }
 
-        internal async Task<string> GetChannelIdForUserName(string userName)
+        internal async Task<string> GetChannelIdForUserName(string userName, AppAccessToken accessToken)
         {
             var client = GetHttpClient("https://api.twitch.tv/helix/");
-            var token = await GetAccessToken();
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token.AccessToken}");
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken.AccessToken}");
 
             string body;
             try
@@ -91,7 +89,7 @@ namespace StreamServices
             }
             catch
             {
-                if (await GetUserNameForChannelId(userName) != string.Empty)
+                if (await GetUserNameForChannelId(userName, accessToken) != string.Empty)
                     return userName;
                 else
                     return string.Empty;
@@ -101,10 +99,10 @@ namespace StreamServices
             return obj["data"][0]["id"].ToString();
         }
 
-        protected async Task<string> IdentifyUser(string user)
+        protected async Task<string> IdentifyUser(string user, AppAccessToken accessToken)
         {
             if (char.IsDigit(user[0]))
-                return await GetUserNameForChannelId(user);
+                return await GetUserNameForChannelId(user, accessToken);
             else
                 return user;
         }
@@ -135,6 +133,34 @@ namespace StreamServices
             var hmacBytes = hmac.ComputeHash(dataBytes);
 
             return BitConverter.ToString(hmacBytes).Replace("-", "").ToLower();
+        }
+
+        protected async Task<AppAccessToken> VerifyAccessToken(CloudTable cloudTable, AppAccessToken appAccessToken, ILogger log)
+        {
+            log.LogInformation("VerifyingAccessToken");
+            await cloudTable.CreateIfNotExistsAsync();
+
+            if (appAccessToken is null)
+            {
+                appAccessToken = new AppAccessToken()
+                {
+                    AccessToken = "123",
+                    ExpiresAtUTC = DateTime.UtcNow.AddMinutes(-15),
+                    PartitionKey = "Twitch",
+                    RowKey = "1"
+                };
+                TableOperation tableOperation = TableOperation.InsertOrReplace(appAccessToken);
+                await cloudTable.ExecuteAsync(tableOperation);
+            }
+
+            if (appAccessToken.ExpiresAtUTC < DateTime.UtcNow.AddSeconds(-30))
+            {
+                await GetAccessToken(appAccessToken);
+                TableOperation tableOperation = TableOperation.InsertOrReplace(appAccessToken);
+                await cloudTable.ExecuteAsync(tableOperation);
+            }
+
+            return appAccessToken;
         }
     }
 }

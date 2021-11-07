@@ -1,11 +1,10 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Azure.Cosmos.Table;
+using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace StreamServices.Core
 {
-    public class AppAccessToken
+    public class AppAccessToken : TableEntity
     {
         [JsonProperty("access_token")]
         public string AccessToken { get; set; }
@@ -15,6 +14,7 @@ namespace StreamServices.Core
 
         [JsonProperty("token_type")]
         public string TokenType { get; set; }
+        public DateTime ExpiresAtUTC { get; set; }
     }
 
 }
