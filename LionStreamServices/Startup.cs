@@ -1,11 +1,6 @@
-﻿using StreamServices;
-using Microsoft.Azure.Functions.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Net.Http;
+using StreamServices;
 
 
 [assembly: FunctionsStartup(typeof(Startup))]
