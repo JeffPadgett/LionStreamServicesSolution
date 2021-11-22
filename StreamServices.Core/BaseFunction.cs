@@ -1,28 +1,21 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.Azure.Cosmos.Table;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Azure.Cosmos.Table;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using StreamServices.Core;
-using StreamServices.Core.Models;
+using StreamServices.Dto;
 using System;
-using System.IO;
+using System.Linq;
 using System.Net.Http;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 
-namespace StreamServices
+namespace StreamServices.Core
 {
     public abstract class BaseFunction
     {
         protected IHttpClientFactory HttpClientFactory { get; }
-        protected IConfiguration Configuration { get; }
-        protected BaseFunction(IHttpClientFactory httpClientFactory, IConfiguration configuration)
+        protected BaseFunction(IHttpClientFactory httpClientFactory)
         {
             HttpClientFactory = httpClientFactory;
-            Configuration = configuration;
         }
 
         public HttpClient GetHttpClient(string baseAddress, string clientId = "", bool includeJson = true, bool discordPost = false)
@@ -46,8 +39,8 @@ namespace StreamServices
 
         protected async Task GetAccessToken(AppAccessToken accessToken)
         {
-            var clientId = Environment.GetEnvironmentVariable("ClientId");
-            var clientSecret = Environment.GetEnvironmentVariable("ClientSecret");
+            var clientId = Environment.GetEnvironmentVariable("TwitchClientId");
+            var clientSecret = Environment.GetEnvironmentVariable("TwitchClientSecret");
 
             using var client = GetHttpClient("https://id.twitch.tv");
             var result = await client.PostAsync($"/oauth2/token?client_id={clientId}&client_secret={clientSecret}&grant_type=client_credentials&scope=", new StringContent(""));
@@ -64,14 +57,15 @@ namespace StreamServices
             var client = GetHttpClient("https://api.twitch.tv/helix/");
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken.AccessToken}");
 
-            var body = await client.GetAsync($"users?id={channelId}")
-              .ContinueWith(msg => msg.Result.Content.ReadAsStringAsync()).Result;
-            var obj = JObject.Parse(body);
-
-            return obj["data"][0]["login"].ToString();
+            var body = await client.GetAsync($"users?id={channelId}");
+            //.ContinueWith(msg => msg.Result.Content.ReadAsStringAsync()).Result;
+            //var obj = JObject.Parse(body);
+            var result = JsonConvert.DeserializeObject<TwitchUsers>(await body.Content.ReadAsStringAsync());
+            return result.Users.FirstOrDefault().Login;
+            //return obj["data"][0]["login"].ToString();
         }
 
-        internal async Task<string> GetChannelIdForUserName(string userName, AppAccessToken accessToken)
+        public async Task<string> GetChannelIdForUserName(string userName, AppAccessToken accessToken)
         {
             var client = GetHttpClient("https://api.twitch.tv/helix/");
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken.AccessToken}");
@@ -107,38 +101,11 @@ namespace StreamServices
                 return user;
         }
 
-        protected async Task<string> VerifySignature(HttpRequest req)
-        {
-            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            var callbackJson = JsonConvert.DeserializeObject<ChallengeJson>(requestBody);
-            var hmacMessage = req.Headers["Twitch-Eventsub-Message-Id"] + req.Headers["Twitch-Eventsub-Message-Timestamp"] + requestBody;
 
-            var expectedSignature = "sha256=" + CreateHmacHash(hmacMessage, Environment.GetEnvironmentVariable("EventSubSecret"));
-
-            var messageSignatureHeader = req.Headers["Twitch-Eventsub-Message-Signature"];
-            if (expectedSignature == messageSignatureHeader)
-            {
-                return callbackJson.Challenge;
-            }
-            else
-                return "";
-        }
-
-        protected static string CreateHmacHash(string data, string key)
-        {
-            var keybytes = UTF8Encoding.UTF8.GetBytes(key);
-            var dataBytes = UTF8Encoding.UTF8.GetBytes(data);
-
-            var hmac = new HMACSHA256(keybytes);
-            var hmacBytes = hmac.ComputeHash(dataBytes);
-
-            return BitConverter.ToString(hmacBytes).Replace("-", "").ToLower();
-        }
 
         protected async Task<AppAccessToken> VerifyAccessToken(CloudTable cloudTable, AppAccessToken appAccessToken, ILogger log)
         {
-            log.LogInformation("VerifyingAccessToken");
-            await cloudTable.CreateIfNotExistsAsync();
+            log.LogInformation("Verifying Access Token");
 
             if (appAccessToken is null)
             {
@@ -150,7 +117,6 @@ namespace StreamServices
                     RowKey = "1"
                 };
                 TableOperation tableOperation = TableOperation.InsertOrReplace(appAccessToken);
-                await cloudTable.ExecuteAsync(tableOperation);
             }
 
             if (appAccessToken.ExpiresAtUTC < DateTime.UtcNow.AddSeconds(-30))
