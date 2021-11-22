@@ -15,7 +15,6 @@
     <PackageReference Include="System.Net.Http.Json" Version="3.2.1" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\source\repos\BlazorTutorial\StreamServices.Dto\StreamServices.Dto.csproj" />
     <ProjectReference Include="..\StreamServices.Core\StreamServices.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
